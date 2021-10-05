@@ -17,28 +17,49 @@
  * under the License.
  */
 
-package org.apache.pulsar.io.source.delta;
+package org.apache.pulsar.io.delta.source;
 
-import org.codehaus.jackson.map.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import lombok.Data;
+import lombok.experimental.Accessors;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
+
+import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Map;
-
+@Data
+@Accessors(chain = true)
 public class DeltaSourceConfig implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    private String[] deltaTablePath;
+    private String deltaTablePath;
 
-    private String pollingInterval;
+    private Long pollingInterval;
 
     private String checkpointDirectory;
+
+    public static DeltaSourceConfig load(String yamlFile) throws IOException {
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        return mapper.readValue(new File(yamlFile), DeltaSourceConfig.class);
+    }
 
     public static DeltaSourceConfig load(Map<String,Object> map) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
         return mapper.readValue(new ObjectMapper().writeValueAsString(map),DeltaSourceConfig.class);
     }
 
+    public void setDeltaTablePath(String deltaTablePath) {
+        this.deltaTablePath = deltaTablePath;
+    }
 
+    public void setPollingInterval(Long pollingInterval) {
+        this.pollingInterval = pollingInterval;
+    }
+
+    public void setCheckpointDirectory(String checkpointDirectory) {
+        this.checkpointDirectory = checkpointDirectory;
+    }
 }

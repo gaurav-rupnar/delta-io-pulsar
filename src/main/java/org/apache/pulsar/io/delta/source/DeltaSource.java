@@ -17,27 +17,46 @@
  * under the License.
  */
 
-package org.apache.pulsar.io.source.delta;
+package org.apache.pulsar.io.delta.source;
 
 import org.apache.pulsar.io.core.PushSource;
 import org.apache.pulsar.io.core.SourceContext;
 
 import java.util.Map;
+import java.util.concurrent.*;
+
 /*
 * check if it's delta table
 *
 *
 * */
-public class DeltaSource extends PushSource {
+public class DeltaSource extends PushSource<byte[]> {
 
+    private ExecutorService executor;
+
+    private final BlockingDeque<Long> snapshotToProcess = new LinkedBlockingDeque<>();
+    private final BlockingDeque<Long> snapshotProcessing = new LinkedBlockingDeque<>();
+    private final BlockingDeque<Long> snapshotProcessed = new LinkedBlockingDeque<>();
+
+    private Long previousSnapshotVersion = null;
     @Override
     public void open(Map config, SourceContext sourceContext) throws Exception {
 
         DeltaSourceConfig deltaSourceConfig = DeltaSourceConfig.load(config);
+        previousSnapshotVersion = 0l; // to do: load from checkpoint directory
+        executor = Executors.newFixedThreadPool(1);
+        executor.execute(new DeltaSourceConsumerThread(this,deltaSourceConfig,previousSnapshotVersion));
     }
 
     @Override
     public void close() throws Exception {
-
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(800, TimeUnit.MILLISECONDS)) {
+                executor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+        }
     }
 }
